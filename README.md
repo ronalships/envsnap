@@ -101,7 +101,7 @@ envsnap share
 - **AWS** — profile names and regions from `~/.aws/config` (never credentials)
 - **Kubernetes** — context and cluster names from kubeconfig (never tokens or certs)
 - **Docker** — client/server version, daemon status, running container count
-- **Git** — global `user.name` and `user.email`
+- **Git** — global `user.name` and `user.email` (email local part redacted by default)
 - **Dotfiles** — inventory of which dotfiles exist (never their contents)
 
 ## Privacy
@@ -120,6 +120,22 @@ Sensitive keys are auto-redacted even with `--values`:
 
 - `*KEY*`, `*SECRET*`, `*TOKEN*`, `*PASSWORD*`
 - `*CREDENTIAL*`, `*AUTH*`, `*PRIVATE*`, `*ACCESS*`
+
+**Cloud account IDs are redacted by default:**
+
+- EKS ARNs: `arn:aws:eks:us-east-1:************:cluster/my-cluster`
+- GKE contexts: `gke_****_us-central1_my-cluster`
+
+**Email addresses are partially redacted:**
+
+- Git user.email shows only the domain: `***@company.com`
+
+To reveal redacted information, use explicit flags:
+
+```bash
+envsnap capture --reveal-ids      # Show full AWS/GCP account IDs
+envsnap capture --reveal-email    # Show full email addresses
+```
 
 Custom redaction patterns coming soon:
 

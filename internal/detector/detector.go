@@ -2,11 +2,19 @@ package detector
 
 import (
 	"context"
+	"regexp"
+	"strings"
 	"time"
 )
 
 // DefaultTimeout is the maximum time a detector should take.
 const DefaultTimeout = 2 * time.Second
+
+// Global options for privacy control (all default to false = redact by default)
+var (
+	RevealAccountIDs bool // Show AWS/GCP account IDs in ARNs
+	RevealEmail      bool // Show full email addresses
+)
 
 // Result holds the output of a detector.
 type Result struct {
@@ -42,6 +50,67 @@ var Registry []Detector
 // Register adds a detector to the registry.
 func Register(d Detector) {
 	Registry = append(Registry, d)
+}
+
+// Privacy helper patterns
+var (
+	// AWS account ID: 12 digits
+	awsAccountIDPattern = regexp.MustCompile(`\b[0-9]{12}\b`)
+	// EKS ARN: arn:aws:eks:<region>:<account-id>:cluster/<name>
+	eksARNPattern = regexp.MustCompile(`arn:aws:eks:([a-z0-9-]+):([0-9]{12}):cluster/(.+)`)
+	// GKE context: gke_<project>_<zone>_<cluster>
+	gkeContextPattern = regexp.MustCompile(`gke_([^_]+)_([^_]+)_(.+)`)
+)
+
+// RedactAccountID redacts AWS account IDs (12-digit numbers) in a string.
+func RedactAccountID(s string) string {
+	if RevealAccountIDs {
+		return s
+	}
+	return awsAccountIDPattern.ReplaceAllString(s, "************")
+}
+
+// RedactEKSARN redacts the account ID portion of an EKS ARN.
+func RedactEKSARN(s string) string {
+	if RevealAccountIDs {
+		return s
+	}
+	return eksARNPattern.ReplaceAllString(s, "arn:aws:eks:$1:************:cluster/$3")
+}
+
+// RedactGKEContext redacts the project ID portion of a GKE context.
+func RedactGKEContext(s string) string {
+	if RevealAccountIDs {
+		return s
+	}
+	return gkeContextPattern.ReplaceAllString(s, "gke_****_${2}_${3}")
+}
+
+// RedactCloudIdentifiers applies all cloud identifier redactions.
+func RedactCloudIdentifiers(s string) string {
+	if RevealAccountIDs {
+		return s
+	}
+	// Apply EKS ARN redaction first (more specific)
+	s = RedactEKSARN(s)
+	// Apply GKE context redaction
+	s = RedactGKEContext(s)
+	// Finally, catch any remaining 12-digit account IDs
+	s = RedactAccountID(s)
+	return s
+}
+
+// RedactEmailLocalPart redacts the local part of an email, keeping the domain.
+// "user@example.com" becomes "***@example.com"
+func RedactEmailLocalPart(email string) string {
+	if RevealEmail {
+		return email
+	}
+	atIndex := strings.LastIndex(email, "@")
+	if atIndex <= 0 {
+		return email // Not a valid email format
+	}
+	return "***" + email[atIndex:]
 }
 
 // RunAll executes all registered detectors and returns their results.

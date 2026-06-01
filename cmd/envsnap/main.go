@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/ronalships/envsnap/internal/capture"
+	"github.com/ronalships/envsnap/internal/detector"
 	"github.com/ronalships/envsnap/internal/diff"
 	"github.com/ronalships/envsnap/internal/share"
 )
@@ -64,6 +65,8 @@ func runCapture(args []string) {
 	fs := flag.NewFlagSet("capture", flag.ExitOnError)
 	output := fs.String("o", "", "Output file (default: stdout)")
 	showValues := fs.Bool("values", false, "Show environment variable values (caution: may expose secrets)")
+	revealIDs := fs.Bool("reveal-ids", false, "Show full AWS/GCP account IDs in ARNs (default: redacted)")
+	revealEmail := fs.Bool("reveal-email", false, "Show full email addresses (default: local part redacted)")
 
 	fs.Usage = func() {
 		fmt.Println(`Usage: envsnap capture [options]
@@ -77,6 +80,10 @@ Options:`)
 	if err := fs.Parse(args); err != nil {
 		os.Exit(1)
 	}
+
+	// Set global reveal options
+	detector.RevealAccountIDs = *revealIDs
+	detector.RevealEmail = *revealEmail
 
 	opts := capture.Options{
 		Output:     *output,

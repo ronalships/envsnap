@@ -15,6 +15,7 @@ func init() {
 
 // KubernetesDetector captures Kubernetes context and cluster names.
 // Never captures tokens, certs, or server URLs.
+// Redacts account IDs in EKS ARNs and GKE context names by default.
 type KubernetesDetector struct{}
 
 func (d *KubernetesDetector) Name() string {
@@ -41,18 +42,30 @@ func (d *KubernetesDetector) Detect(ctx context.Context) (Result, error) {
 	// Try kubectl first for current context
 	currentContext := getCurrentKubeContext(ctx)
 	if currentContext != "" {
-		result.Items = append(result.Items, Item{Key: "Current Context", Value: currentContext})
+		// Redact account IDs in EKS ARNs and GKE contexts
+		redactedContext := RedactCloudIdentifiers(currentContext)
+		result.Items = append(result.Items, Item{Key: "Current Context", Value: redactedContext})
 	}
 
 	// Parse kubeconfig for available contexts and clusters
 	contexts, clusters := parseKubeconfig(kubeconfigPath)
 
 	if len(contexts) > 0 {
-		result.Items = append(result.Items, Item{Key: "Available Contexts", Value: strings.Join(contexts, ", ")})
+		// Redact each context name
+		redactedContexts := make([]string, len(contexts))
+		for i, c := range contexts {
+			redactedContexts[i] = RedactCloudIdentifiers(c)
+		}
+		result.Items = append(result.Items, Item{Key: "Available Contexts", Value: strings.Join(redactedContexts, ", ")})
 	}
 
 	if len(clusters) > 0 {
-		result.Items = append(result.Items, Item{Key: "Configured Clusters", Value: strings.Join(clusters, ", ")})
+		// Redact each cluster name
+		redactedClusters := make([]string, len(clusters))
+		for i, c := range clusters {
+			redactedClusters[i] = RedactCloudIdentifiers(c)
+		}
+		result.Items = append(result.Items, Item{Key: "Configured Clusters", Value: strings.Join(redactedClusters, ", ")})
 	}
 
 	return result, nil
@@ -105,18 +118,35 @@ func parseKubeconfig(path string) (contexts []string, clusters []string) {
 		if inContexts && strings.HasPrefix(trimmed, "- name:") {
 			name := strings.TrimSpace(strings.TrimPrefix(trimmed, "- name:"))
 			name = strings.Trim(name, `"'`)
-			if name != "" {
+			if name != "" && isValidKubeName(name) {
 				contexts = append(contexts, name)
 			}
 		}
 		if inClusters && strings.HasPrefix(trimmed, "- name:") {
 			name := strings.TrimSpace(strings.TrimPrefix(trimmed, "- name:"))
 			name = strings.Trim(name, `"'`)
-			if name != "" {
+			if name != "" && isValidKubeName(name) {
 				clusters = append(clusters, name)
 			}
 		}
 	}
 
 	return contexts, clusters
+}
+
+// isValidKubeName checks if a name is a reasonable Kubernetes identifier.
+// Prevents parsing errors from leaking arbitrary content.
+func isValidKubeName(name string) bool {
+	if len(name) == 0 || len(name) > 253 {
+		return false
+	}
+	// Allow typical k8s name chars plus : and / for ARNs
+	for _, c := range name {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' ||
+			c == ':' || c == '/') {
+			return false
+		}
+	}
+	return true
 }
