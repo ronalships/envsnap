@@ -28,12 +28,12 @@ These problems aren't hard. They're just tedious. envsnap makes them trivial.
 
 ## Install
 
-**Homebrew** (tap coming soon):
+**Homebrew** (coming soon):
 ```bash
-brew install envsnap
+brew install ronalships/tap/envsnap
 ```
 
-**Shell script** (coming with first release):
+**Shell script**:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ronalships/envsnap/main/install.sh | sh
 ```
