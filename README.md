@@ -164,6 +164,6 @@ Contributions welcome! Whether it's a bug report, a feature request, or a PR —
 ---
 
 <p align="center">
-  Built by <a href="https://x.com/RonalRaj4">@RonalRaj4</a> on X.<br>
+  Built by <a href="https://x.com/ronalships">@RonalRaj</a> on X.<br>
   Star the repo if envsnap saved you time.
 </p>
