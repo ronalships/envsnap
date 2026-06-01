@@ -121,15 +121,13 @@ Sensitive keys are auto-redacted even with `--values`:
 - `*KEY*`, `*SECRET*`, `*TOKEN*`, `*PASSWORD*`
 - `*CREDENTIAL*`, `*AUTH*`, `*PRIVATE*`, `*ACCESS*`
 
-Need custom patterns? Add them to `~/.envsnaprc`:
-
-```
-redact = *INTERNAL*, *CORP_*
-```
-
-Or pass them inline:
+Custom redaction patterns coming soon:
 
 ```bash
+# ~/.envsnaprc (planned)
+redact = *INTERNAL*, *CORP_*
+
+# or inline (planned)
 envsnap capture --redact "*ACME*,*INTERNAL*"
 ```
 
