@@ -1,6 +1,6 @@
-# Binaries
-envsnap
-envsnap.exe
+# Binaries (root only, not cmd/envsnap/)
+/envsnap
+/envsnap.exe
 *.exe
 *.exe~
 *.dll
